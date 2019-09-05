@@ -7,14 +7,8 @@ import Rank from './components/Rank/Rank.js';
 import FaceRecognition from './components/FaceRecognition/FaceRecognition.js';
 import SignIn from './components/SignIn/SignIn.js';
 import Register from './components/Register/Register.js';
-import Clarifai from 'clarifai';
 import './App.css';
 
-
-
-const app = new Clarifai.App({
- apiKey: '459c1054278d4c6fa4fd9b5011de32b5',
-});
 
 const particlesOptions = {
     particles: {
@@ -98,15 +92,17 @@ class App extends Component {
 
   onSubmit=()=>{
     this.setState({imageUrl: this.state.input})
-    app.models
-    .predict(
-    Clarifai.FACE_DETECT_MODEL,
-        // URL
-        this.state.input
-    )
+    fetch('https://agile-hollows-88381.herokuapp.com/imageurl', {
+          method: 'post',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            input: this.state.input
+          })
+        })
+    .then(response=>response.json())
     .then(response => {
       if(response){
-        fetch('http://localhost:3000/image', {
+        fetch('https://agile-hollows-88381.herokuapp.com/image', {
           method: 'put',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
