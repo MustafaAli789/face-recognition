@@ -7,6 +7,8 @@ import Rank from './components/Rank/Rank.js';
 import FaceRecognition from './components/FaceRecognition/FaceRecognition.js';
 import SignIn from './components/SignIn/SignIn.js';
 import Register from './components/Register/Register.js';
+import Modal from './components/Modal/Modal'
+import Profile from './components/Profile/Profile'
 import './App.css';
 
 
@@ -28,12 +30,15 @@ const initalState = {
       boxes:[],
       route: 'signin',
       isSignedIn: false,
+      isProfileOpen: false,
       user: {
         id: '',
         name: '',
         email: '',
         entries: 0,
-        joined: ''
+        joined: '',
+        pet: '',
+        age: ''
       }
 } 
 
@@ -41,20 +46,7 @@ class App extends Component {
 
   constructor(){
     super();
-    this.state={
-      input: '',
-      imageUrl: '',
-      boxes: [],
-      route: 'signin',
-      isSignedIn: false,
-      user: {
-        id: '',
-        name: '',
-        email: '',
-        entries: 0,
-        joined: ''
-      }
-    }
+    this.state=initalState
   }
 
   loadUser = (data)=>{
@@ -95,7 +87,7 @@ class App extends Component {
 
   onSubmit=()=>{
     this.setState({imageUrl: this.state.input})
-    fetch('http://localhost:3000/imageurl', {
+    fetch('http://192.168.99.100:3000/imageurl', {
           method: 'post',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
@@ -105,7 +97,7 @@ class App extends Component {
     .then(response=>response.json())
     .then(response => {
       if(response){
-        fetch('http://localhost:3000/image', {
+        fetch('http://192.168.99.100:3000/image', {
           method: 'put',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
@@ -126,23 +118,32 @@ class App extends Component {
 
   onRouteChange = (route)=>{
     if(route==='signout'){
-      this.setState(initalState);
+      return this.setState(initalState);
     } else if(route==='home'){
       this.setState({isSignedIn: true});
     }
     this.setState({route: route});
   }
 
-
+  toggleModal = () => {
+    this.setState(prevState => ({
+      ...prevState,
+      isProfileOpen: !prevState.isProfileOpen
+    }))
+  }
 
   render(){
-    const {isSignedIn, imageUrl, route, boxes} = this.state;
+    const {isSignedIn, imageUrl, route, boxes, isProfileOpen, user} = this.state;
     return (
       <div className="App">
         <Particles className="particles"
           params={particlesOptions}
         />
-        <Navigation isSignedIn={this.state.isSignedIn} onRouteChange={this.onRouteChange}/>
+        <Navigation isSignedIn={this.state.isSignedIn} onRouteChange={this.onRouteChange} toggleModal={this.toggleModal}/>
+        {isProfileOpen &&
+        <Modal >
+          <Profile isProfileOpen={isProfileOpen} toggleModal={this.toggleModal} user={user}/>
+        </Modal>}
         {route==='home' ? 
             <div>
               <Logo/>
