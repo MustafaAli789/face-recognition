@@ -49,18 +49,58 @@ class App extends Component {
     this.state=initalState
   }
 
+  componentDidMount(){
+    const token = window.sessionStorage.getItem('token');
+    if (token) {
+      fetch('http://192.168.99.100:3000/signin', {
+        method: 'post',
+        headers: {
+          'Content-Type':'application/json',
+          'Authorization': token
+        }
+      })
+      .then(res=>res.json())
+      .then(data => {
+        if (data && data.id){
+          fetch(`http://192.168.99.100:3000/profile/${data.id}`, {
+            method: 'get',
+            headers: {
+              'Content-Type':'application/json',
+              'Authorization': token
+            }
+          })
+          .then(resp=>resp.json())
+          .then(user=>{
+            if (user && user.email) {
+              this.loadUser(user);
+              this.onRouteChange('home')
+            }
+          })
+        }
+      })
+      .catch(console.log)
+    }
+  }
+
   loadUser = (data)=>{
     this.setState({user: {
       id: data.id,
       name: data.name,
       email: data.email,
       entries: data.entries,
-      joined: data.joined
+      joined: data.joined,
+      pet: data.pet,
+      age: data.age
     }})
   }
 
 
   calculateFaceLocations = (data)=>{
+
+    if (!(data && data.outputs)) {
+      return null
+    }
+
     return data.outputs[0].data.regions.map(face=>{
       const clarifaiFace = face.region_info.bounding_box;
       const image = document.getElementById("inputImage");
@@ -78,6 +118,8 @@ class App extends Component {
   }
 
   displayFaceBoxes = (boxes)=>{
+    if (!boxes)
+      return
     this.setState({boxes: boxes});
   }
 
@@ -89,7 +131,7 @@ class App extends Component {
     this.setState({imageUrl: this.state.input})
     fetch('http://192.168.99.100:3000/imageurl', {
           method: 'post',
-          headers: {'Content-Type':'application/json'},
+          headers: {'Content-Type':'application/json', 'Authorization': window.sessionStorage.getItem('token')},
           body: JSON.stringify({
             input: this.state.input
           })
@@ -99,14 +141,15 @@ class App extends Component {
       if(response){
         fetch('http://192.168.99.100:3000/image', {
           method: 'put',
-          headers: {'Content-Type':'application/json'},
+          headers: {'Content-Type':'application/json','Authorization': window.sessionStorage.getItem('token')},
           body: JSON.stringify({
             id: this.state.user.id
           })
         })
         .then(response=>response.json())
         .then(count=>{
-          this.setState(Object.assign(this.state.user, {entries: count}))
+          if (count !== 'Unauthorized')
+            this.setState(Object.assign(this.state.user, {entries: count}))
         })
         .catch(console.log)
       }
@@ -118,7 +161,18 @@ class App extends Component {
 
   onRouteChange = (route)=>{
     if(route==='signout'){
-      return this.setState(initalState);
+      fetch('http://192.168.99.100:3000/signout', {
+        method: 'delete',
+        headers: {'Content-Type':'application/json','Authorization': window.sessionStorage.getItem('token')},
+      }).then(res=>{
+        console.log('Response: ' + res)
+        if (res.status===200 || res.status===304) {
+          window.sessionStorage.removeItem('token');
+          return this.setState(initalState);
+        } else {
+          console.log('Could not signout')
+        }
+      })
     } else if(route==='home'){
       this.setState({isSignedIn: true});
     }
@@ -142,7 +196,7 @@ class App extends Component {
         <Navigation isSignedIn={this.state.isSignedIn} onRouteChange={this.onRouteChange} toggleModal={this.toggleModal}/>
         {isProfileOpen &&
         <Modal >
-          <Profile isProfileOpen={isProfileOpen} toggleModal={this.toggleModal} user={user}/>
+          <Profile isProfileOpen={isProfileOpen} toggleModal={this.toggleModal} user={user} loadUser={this.loadUser}/>
         </Modal>}
         {route==='home' ? 
             <div>
